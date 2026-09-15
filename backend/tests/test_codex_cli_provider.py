@@ -6,6 +6,7 @@ from openai.types.chat import ChatCompletionMessageParam
 
 from agent.providers.codex_cli import (
     build_codex_exec_command,
+    finalize_codex_assistant_text,
     prepare_codex_prompt_and_images,
 )
 
@@ -93,3 +94,22 @@ def test_prepare_codex_prompt_writes_data_url_images_and_preserves_text(
     assert len(image_paths) == 1
     assert image_paths[0].read_bytes() == b"fake-png"
     assert image_paths[0].parent == tmp_path
+
+
+def test_finalize_codex_assistant_text_returns_generated_index_file(
+    tmp_path: Path,
+) -> None:
+    index_html = tmp_path / "index.html"
+    index_html.write_text(
+        "<!DOCTYPE html><html><body>Built site</body></html>",
+        encoding="utf-8",
+    )
+
+    assistant_text = finalize_codex_assistant_text(
+        "Built index.html as requested.",
+        tmp_path,
+    )
+
+    assert assistant_text.startswith('<file path="index.html">')
+    assert "<body>Built site</body>" in assistant_text
+    assert assistant_text.endswith("</file>")

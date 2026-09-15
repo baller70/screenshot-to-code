@@ -139,6 +139,18 @@ def build_codex_exec_command(
     return command
 
 
+def finalize_codex_assistant_text(assistant_text: str, workdir: Path) -> str:
+    if "<file" in assistant_text and "</file>" in assistant_text:
+        return assistant_text
+
+    generated_index = workdir / "index.html"
+    if generated_index.exists():
+        html = generated_index.read_text(encoding="utf-8")
+        return f'<file path="index.html">\n{html}\n</file>'
+
+    return assistant_text
+
+
 class CodexCliProviderSession:
     def __init__(
         self,
@@ -206,6 +218,7 @@ class CodexCliProviderSession:
             if self.output_path.exists()
             else stdout_text
         )
+        assistant_text = finalize_codex_assistant_text(assistant_text, self.workdir)
         await on_event(StreamEvent(type="assistant_delta", text=assistant_text))
         return ProviderTurn(assistant_text=assistant_text, tool_calls=[])
 
