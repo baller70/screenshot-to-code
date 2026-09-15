@@ -12,6 +12,9 @@ export default ({ mode }) => {
 
   return defineConfig({
     base: "",
+    preview: {
+      allowedHosts: ["screenshot-to-code-factory.194-146-12-139.sslip.io"],
+    },
     server: {
       // Listen on all interfaces so sandbox preview tunnels can reach the
       // dev server (default binding is loopback-only).
