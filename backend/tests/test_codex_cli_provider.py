@@ -161,3 +161,27 @@ def test_finalize_codex_assistant_text_inlines_generated_local_image_assets(
     assert "data:image/jpeg;base64,ZmFrZS1qcGc=" in assistant_text
     assert "assets/hero.png" not in assistant_text
     assert "assets/card.jpg" not in assistant_text
+
+
+def test_finalize_codex_assistant_text_inlines_script_asset_strings(
+    tmp_path: Path,
+) -> None:
+    assets_dir = tmp_path / "assets"
+    assets_dir.mkdir()
+    (assets_dir / "program.webp").write_bytes(b"fake-webp")
+    (tmp_path / "index.html").write_text(
+        (
+            "<!DOCTYPE html><html><body><script>"
+            "const cards = [['Program', 'assets/program.webp']];"
+            "</script></body></html>"
+        ),
+        encoding="utf-8",
+    )
+
+    assistant_text = finalize_codex_assistant_text(
+        "Built index.html with script assets.",
+        tmp_path,
+    )
+
+    assert "data:image/webp;base64,ZmFrZS13ZWJw" in assistant_text
+    assert "assets/program.webp" not in assistant_text

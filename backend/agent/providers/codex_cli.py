@@ -26,6 +26,12 @@ LOCAL_ASSET_RE = re.compile(
     r"(?P<suffix>['\"]|\)?['\"]?\))",
     re.IGNORECASE,
 )
+LOCAL_ASSET_STRING_RE = re.compile(
+    r"(?P<quote>['\"])"
+    r"(?P<path>(?!data:|https?:|//|#)[^'\"\)]+\.(?:png|jpe?g|webp|gif|svg))"
+    r"(?P=quote)",
+    re.IGNORECASE,
+)
 
 
 def is_codex_cli_available(codex_path: str = "codex") -> bool:
@@ -178,14 +184,23 @@ def _resolve_local_asset(workdir: Path, raw_path: str) -> Path | None:
 
 
 def inline_local_asset_references(content: str, workdir: Path) -> str:
-    def replace(match: re.Match[str]) -> str:
+    def replace_attribute_or_url(match: re.Match[str]) -> str:
         asset_path = _resolve_local_asset(workdir, match.group("path"))
         data_url = _local_asset_to_data_url(asset_path) if asset_path else None
         if data_url is None:
             return match.group(0)
         return f"{match.group('prefix')}{data_url}{match.group('suffix')}"
 
-    return LOCAL_ASSET_RE.sub(replace, content)
+    def replace_quoted_path(match: re.Match[str]) -> str:
+        asset_path = _resolve_local_asset(workdir, match.group("path"))
+        data_url = _local_asset_to_data_url(asset_path) if asset_path else None
+        if data_url is None:
+            return match.group(0)
+        quote = match.group("quote")
+        return f"{quote}{data_url}{quote}"
+
+    content = LOCAL_ASSET_RE.sub(replace_attribute_or_url, content)
+    return LOCAL_ASSET_STRING_RE.sub(replace_quoted_path, content)
 
 
 def finalize_codex_assistant_text(assistant_text: str, workdir: Path) -> str:
