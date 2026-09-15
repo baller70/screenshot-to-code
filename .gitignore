@@ -24,3 +24,6 @@ frontend/.env.local
 
 # Walkthrough demo videos
 walkthrough/
+
+# Local stress-test artifacts
+stress-tests/
