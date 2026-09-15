@@ -15,8 +15,20 @@ def build_image_prompt_messages(
     image_policy = build_user_image_policy(image_generation_enabled)
     selected_stack = build_selected_stack_policy(stack)
     design_system_block = build_design_system_prompt_block(design_system)
+    website_mode_instruction = (
+        """
+Build a complete navigable website from the provided screenshots.
+Each screenshot is a distinct page, route, or major section in the final website.
+Preserve the supplied screenshot order as the default site map unless the user's instructions explicitly name a different order.
+Do not output a gallery of screenshots, static examples, or disconnected mockups.
+The generated result must be a runnable website that users can click through in the preview.
+"""
+        if len(image_data_urls) > 1
+        else "Generate code for a web page that looks exactly like the provided screenshot."
+    )
+
     user_prompt = f"""
-Generate code for a web page that looks exactly like the provided screenshot(s).
+{website_mode_instruction}
 
 {selected_stack}
 {design_system_block}
@@ -35,11 +47,13 @@ Generate code for a web page that looks exactly like the provided screenshot(s).
 
 ## Multiple screenshots
 
-If multiple screenshots are provided, organize them meaningfully:
+If multiple screenshots are provided, treat them as a website build packet:
 
-- If they appear to be different pages in a website, make them distinct pages and link them.
-- If they look like different tabs or views in an app, connect them with appropriate navigation.
-- If they appear unrelated, create a scaffold that separates them into "Screenshot 1", "Screenshot 2", "Screenshot 3", etc. so it is easy to navigate.
+- Make each screenshot a distinct page, route, tab, or major section and link them through realistic navigation.
+- Infer page roles from the visuals and user prompt when possible: landing/home, about, programs, services, pricing, contact, dashboard, detail page, etc.
+- If page roles are ambiguous, name them by position such as Page 1, Page 2, Page 3, but still build one coherent navigable website.
+- Do not output a gallery of screenshots or a comparison page.
+- Do not ask the user to copy and paste code; the generated preview is the website.
 - For mobile screenshots, do not include the device frame or browser chrome; focus only on the actual UI mockups.
 """
 

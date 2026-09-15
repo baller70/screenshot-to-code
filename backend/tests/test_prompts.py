@@ -221,7 +221,7 @@ class TestCreatePrompt:
                             },
                             {
                                 "type": "text",
-                                "text": "<CONTAINS:Generate code for a web page that looks exactly like the provided screenshot(s).>",
+                                "text": "<CONTAINS:Generate code for a web page that looks exactly like the provided screenshot.>",
                             },
                         ],
                     },
@@ -231,6 +231,34 @@ class TestCreatePrompt:
             # Assert the structure matches
             actual: ExpectedResult = {"messages": messages}
             assert_structure_match(actual, expected)
+
+    @pytest.mark.asyncio
+    async def test_image_mode_create_multiple_images_builds_navigable_website(self) -> None:
+        messages = await build_prompt_messages(
+            stack=self.TEST_STACK,
+            input_mode="image",
+            generation_type="create",
+            prompt={
+                "text": "",
+                "images": [self.TEST_IMAGE_URL, self.RESULT_IMAGE_URL],
+                "videos": [],
+            },
+            history=[],
+        )
+
+        user_content = messages[1].get("content")
+        assert isinstance(user_content, list)
+        text_part = next(
+            part
+            for part in user_content
+            if isinstance(part, dict) and part.get("type") == "text"
+        )
+        text = text_part.get("text")
+        assert isinstance(text, str)
+
+        assert "Build a complete navigable website" in text
+        assert "Each screenshot is a distinct page, route, or major section" in text
+        assert "Do not output a gallery of screenshots" in text
 
     @pytest.mark.asyncio
     async def test_image_mode_create_with_image_generation_disabled(self) -> None:
