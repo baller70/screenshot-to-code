@@ -4,6 +4,8 @@ from typing import TypedDict
 
 # Actual model versions that are passed to the LLMs and stored in our logs
 class Llm(Enum):
+    # Local Codex CLI
+    CODEX_CLI = "codex-cli"
     # GPT
     GPT_5_4_MINI_LOW = "gpt-5.4-mini (low thinking)"
     GPT_5_4_2026_03_05_NONE = "gpt-5.4-2026-03-05 (no thinking)"
@@ -65,6 +67,7 @@ class Completion(TypedDict):
 # groupings authoritative and avoids relying on name conventions when checking
 # models elsewhere in the codebase.
 MODEL_PROVIDER: dict[Llm, str] = {
+    Llm.CODEX_CLI: "codex_cli",
     # OpenAI models
     Llm.GPT_5_4_MINI_LOW: "openai",
     Llm.GPT_5_4_2026_03_05_NONE: "openai",
@@ -121,6 +124,7 @@ MODEL_PROVIDER: dict[Llm, str] = {
 OPENAI_MODELS = {m for m, p in MODEL_PROVIDER.items() if p == "openai"}
 ANTHROPIC_MODELS = {m for m, p in MODEL_PROVIDER.items() if p == "anthropic"}
 GEMINI_MODELS = {m for m, p in MODEL_PROVIDER.items() if p == "gemini"}
+CODEX_CLI_MODELS = {m for m, p in MODEL_PROVIDER.items() if p == "codex_cli"}
 
 OPENAI_MODEL_CONFIG: dict[Llm, dict[str, str]] = {
     Llm.GPT_5_4_MINI_LOW: {"api_name": "gpt-5.4-mini", "reasoning_effort": "low"},

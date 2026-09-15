@@ -11,6 +11,8 @@ from starlette.websockets import WebSocketDisconnect
 from websockets.exceptions import ConnectionClosedOK, ConnectionClosedError
 from config import (
     ANTHROPIC_API_KEY,
+    CODEX_CLI_ENABLED,
+    CODEX_CLI_PATH,
     GEMINI_API_KEY,
     IS_DEBUG_ENABLED,
     IS_PROD,
@@ -61,6 +63,7 @@ from uploaded_assets import (
     append_uploaded_asset_ids_to_prompt,
     infer_local_asset_base_url,
 )
+from agent.providers.codex_cli import is_codex_cli_available
 from agent.runner import Agent
 from fs_logging.agent_runs import AgentRunRecorder
 from routes.model_choice_sets import (
@@ -442,9 +445,8 @@ class ModelSelectionStage:
             return variant_models
         except Exception:
             await self.throw_error(
-                "No OpenAI, Anthropic, or Gemini API key found. Please add the environment variable "
-                "OPENAI_API_KEY, ANTHROPIC_API_KEY, or GEMINI_API_KEY to backend/.env or in the settings dialog. "
-                "If you add it to .env, make sure to restart the backend server."
+                "No model provider is available. Add an OpenAI, Anthropic, or Gemini API key, "
+                "or install and log in to Codex CLI so this factory can run codex exec."
             )
             raise Exception("No API key")
 
@@ -488,8 +490,10 @@ class ModelSelectionStage:
             models = list(ANTHROPIC_ONLY_MODELS)
         elif openai_api_key:
             models = list(OPENAI_ONLY_MODELS)
+        elif CODEX_CLI_ENABLED and is_codex_cli_available(CODEX_CLI_PATH):
+            return [Llm.CODEX_CLI]
         else:
-            raise Exception("No OpenAI or Anthropic key")
+            raise Exception("No API key or Codex CLI")
 
         # Cycle through models: [A, B] with num=5 becomes [A, B, A, B, A]
         selected_models: List[Llm] = []
@@ -771,9 +775,22 @@ class StatusBroadcastMiddleware(Middleware):
         assert context.extracted_params is not None
         is_video_mode = context.extracted_params.input_mode == "video"
         is_update = context.extracted_params.generation_type == "update"
-        num_variants = (
-            NUM_VARIANTS_VIDEO if is_video_mode else 2 if is_update else NUM_VARIANTS
+        has_api_provider = bool(
+            context.extracted_params.openai_api_key
+            or context.extracted_params.anthropic_api_key
+            or context.extracted_params.gemini_api_key
         )
+        is_codex_cli_fallback = (
+            not has_api_provider
+            and CODEX_CLI_ENABLED
+            and is_codex_cli_available(CODEX_CLI_PATH)
+        )
+        if is_codex_cli_fallback:
+            num_variants = 1
+        else:
+            num_variants = (
+                NUM_VARIANTS_VIDEO if is_video_mode else 2 if is_update else NUM_VARIANTS
+            )
 
         # Tell frontend how many variants we're using
         await context.send_message("variantCount", str(num_variants), 0)
@@ -816,14 +833,13 @@ class CodeGenerationMiddleware(Middleware):
                 anthropic_api_key=context.extracted_params.anthropic_api_key,
                 gemini_api_key=context.extracted_params.gemini_api_key,
             )
-            if IS_DEBUG_ENABLED:
-                await context.send_message(
-                    "variantModels",
-                    None,
-                    0,
-                    {"models": [model.value for model in context.variant_models]},
-                    None,
-                )
+            await context.send_message(
+                "variantModels",
+                None,
+                0,
+                {"models": [model.value for model in context.variant_models]},
+                None,
+            )
 
             generation_stage = AgenticGenerationStage(
                 send_message=context.send_message,

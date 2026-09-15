@@ -115,3 +115,59 @@ async def test_image_update_broadcasts_two_variants() -> None:
     assert len(status_messages) == 2
     assert [m[2] for m in status_messages] == [0, 1]
     assert next_called is True
+
+
+@pytest.mark.asyncio
+async def test_codex_cli_fallback_broadcasts_one_variant(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    sent_messages: list[tuple[str, str | None, int]] = []
+
+    async def send_message(
+        msg_type: str,
+        value: str | None,
+        variant_index: int,
+        data=None,
+        eventId=None,
+    ) -> None:
+        sent_messages.append((msg_type, value, variant_index))
+
+    monkeypatch.setattr("routes.generate_code.CODEX_CLI_ENABLED", True)
+    monkeypatch.setattr("routes.generate_code.CODEX_CLI_PATH", "codex")
+    monkeypatch.setattr("routes.generate_code.is_codex_cli_available", lambda _: True)
+
+    context = PipelineContext(websocket=MagicMock())
+    context.ws_comm = cast(
+        Any,
+        SimpleNamespace(
+            send_message=send_message,
+            throw_error=AsyncMock(),
+        ),
+    )
+    context.extracted_params = ExtractedParams(
+        stack="html_tailwind",
+        input_mode="text",
+        should_generate_images=False,
+        openai_api_key=None,
+        anthropic_api_key=None,
+        gemini_api_key=None,
+        replicate_api_key=None,
+        openai_base_url=None,
+        generation_type="create",
+        prompt={"text": "Build this", "images": [], "videos": []},
+        history=[],
+        file_state=None,
+        option_codes=[],
+    )
+
+    middleware = StatusBroadcastMiddleware()
+
+    async def next_func() -> None:
+        return None
+
+    await middleware.process(context, next_func)
+
+    assert sent_messages[0] == ("variantCount", "1", 0)
+    status_messages = [m for m in sent_messages if m[0] == "status"]
+    assert len(status_messages) == 1
+    assert status_messages[0] == ("status", "Generating code...", 0)

@@ -1,3 +1,4 @@
+from pathlib import Path
 from typing import Optional
 
 from anthropic import AsyncAnthropic
@@ -7,12 +8,20 @@ from openai.types.chat import ChatCompletionMessageParam
 
 from agent.providers.anthropic import AnthropicProviderSession, serialize_anthropic_tools
 from agent.providers.base import ProviderSession
+from agent.providers.codex_cli import CodexCliProviderSession
 from agent.providers.gemini import GeminiProviderSession, serialize_gemini_tools
 from agent.providers.openai import OpenAIProviderSession, serialize_openai_tools
 from agent.tools import canonical_tool_definitions
-from config import REPLICATE_API_KEY
+from config import (
+    CODEX_CLI_MODEL,
+    CODEX_CLI_PATH,
+    CODEX_CLI_PROFILE,
+    CODEX_CLI_RUNS_DIR,
+    REPLICATE_API_KEY,
+)
 from fs_logging.agent_runs import AgentRunRecorder
-from llm import ANTHROPIC_MODELS, GEMINI_MODELS, OPENAI_MODELS, Llm
+
+from llm import ANTHROPIC_MODELS, CODEX_CLI_MODELS, GEMINI_MODELS, OPENAI_MODELS, Llm
 from preview_screenshot import is_screenshot_preview_available
 
 
@@ -28,6 +37,15 @@ def create_provider_session(
     should_extract_assets: bool = True,
     recorder: Optional[AgentRunRecorder] = None,
 ) -> ProviderSession:
+    if model in CODEX_CLI_MODELS:
+        return CodexCliProviderSession(
+            prompt_messages=prompt_messages,
+            codex_path=CODEX_CLI_PATH,
+            runs_dir=Path(CODEX_CLI_RUNS_DIR),
+            model=CODEX_CLI_MODEL,
+            profile=CODEX_CLI_PROFILE,
+        )
+
     canonical_tools = canonical_tool_definitions(
         image_generation_enabled=should_generate_images,
         # The edit_images tool calls Replicate, so don't offer it without a key.

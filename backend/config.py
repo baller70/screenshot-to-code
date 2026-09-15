@@ -12,6 +12,18 @@ OPENAI_BASE_URL = os.environ.get("OPENAI_BASE_URL", None)
 # Image generation (optional)
 REPLICATE_API_KEY = os.environ.get("REPLICATE_API_KEY", None)
 
+# Codex CLI provider. This lets the factory use the authenticated local Codex
+# installation instead of embedding direct model provider API keys.
+CODEX_CLI_PATH = os.environ.get("CODEX_CLI_PATH", "codex")
+CODEX_CLI_MODEL = os.environ.get("CODEX_CLI_MODEL", None)
+CODEX_CLI_PROFILE = os.environ.get("CODEX_CLI_PROFILE", None)
+CODEX_CLI_RUNS_DIR = os.environ.get(
+    "CODEX_CLI_RUNS_DIR", os.path.join(os.path.dirname(__file__), "factory_runs")
+)
+CODEX_CLI_ENABLED = os.environ.get(
+    "CODEX_CLI_ENABLED", "true"
+).strip().lower() not in {"0", "false", "no", "off"}
+
 # Debugging-related
 IS_DEBUG_ENABLED = bool(os.environ.get("IS_DEBUG_ENABLED", False))
 DEBUG_DIR = os.environ.get("DEBUG_DIR", "")

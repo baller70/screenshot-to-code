@@ -212,8 +212,10 @@ class TestModelSelectionNoKeys:
         self.model_selector = ModelSelectionStage(mock_throw_error)
 
     @pytest.mark.asyncio
-    async def test_no_keys_raises_error(self):
+    async def test_no_keys_raises_error(self, monkeypatch: pytest.MonkeyPatch):
         """No keys: Should raise an exception"""
+        self.model_selector = ModelSelectionStage(AsyncMock())
+        monkeypatch.setattr("routes.generate_code.CODEX_CLI_ENABLED", False)
         with pytest.raises(Exception, match="No API key"):
             await self.model_selector.select_models(
                 generation_type="create",
@@ -222,3 +224,22 @@ class TestModelSelectionNoKeys:
                 anthropic_api_key=None,
                 gemini_api_key=None,
             )
+
+    @pytest.mark.asyncio
+    async def test_no_keys_uses_codex_cli_when_available(
+        self, monkeypatch: pytest.MonkeyPatch
+    ):
+        """No API keys: use local Codex CLI when it is installed and enabled."""
+        monkeypatch.setattr("routes.generate_code.CODEX_CLI_ENABLED", True)
+        monkeypatch.setattr("routes.generate_code.CODEX_CLI_PATH", "codex")
+        monkeypatch.setattr("routes.generate_code.is_codex_cli_available", lambda _: True)
+
+        models = await self.model_selector.select_models(
+            generation_type="create",
+            input_mode="text",
+            openai_api_key=None,
+            anthropic_api_key=None,
+            gemini_api_key=None,
+        )
+
+        assert models == [Llm.CODEX_CLI]
