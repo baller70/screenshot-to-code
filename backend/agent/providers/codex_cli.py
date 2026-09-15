@@ -139,14 +139,24 @@ def build_codex_exec_command(
     return command
 
 
-def finalize_codex_assistant_text(assistant_text: str, workdir: Path) -> str:
-    if "<file" in assistant_text and "</file>" in assistant_text:
-        return assistant_text
+def _looks_like_html_document(content: str) -> bool:
+    normalized = content.lower()
+    return "<html" in normalized and "</html>" in normalized
 
+
+def _wrap_index_html(content: str) -> str:
+    return f'<file path="index.html">\n{content}\n</file>'
+
+
+def finalize_codex_assistant_text(assistant_text: str, workdir: Path) -> str:
     generated_index = workdir / "index.html"
     if generated_index.exists():
         html = generated_index.read_text(encoding="utf-8")
-        return f'<file path="index.html">\n{html}\n</file>'
+        if _looks_like_html_document(html):
+            return _wrap_index_html(html)
+
+    if "<file" in assistant_text and "</file>" in assistant_text:
+        return assistant_text
 
     return assistant_text
 

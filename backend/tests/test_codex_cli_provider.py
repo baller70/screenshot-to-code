@@ -113,3 +113,21 @@ def test_finalize_codex_assistant_text_returns_generated_index_file(
     assert assistant_text.startswith('<file path="index.html">')
     assert "<body>Built site</body>" in assistant_text
     assert assistant_text.endswith("</file>")
+
+
+def test_finalize_codex_assistant_text_prefers_real_html_over_summary_file_block(
+    tmp_path: Path,
+) -> None:
+    index_html = tmp_path / "index.html"
+    index_html.write_text(
+        "<!DOCTYPE html><html><body>Real generated site</body></html>",
+        encoding="utf-8",
+    )
+
+    assistant_text = finalize_codex_assistant_text(
+        '<file path="index.html">Completed runnable website.</file>',
+        tmp_path,
+    )
+
+    assert "<body>Real generated site</body>" in assistant_text
+    assert "Completed runnable website" not in assistant_text
