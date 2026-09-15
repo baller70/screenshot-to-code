@@ -38,7 +38,27 @@ def test_build_codex_exec_command_uses_safe_noninteractive_defaults(
     assert command[command.index("--output-last-message") + 1] == str(output_path)
     assert command[command.index("--model") + 1] == "gpt-5.6-sol"
     assert command[command.index("--profile") + 1] == "factory"
-    assert command[-1] == "Build this UI."
+    assert "Build this UI." not in command
+
+
+def test_build_codex_exec_command_does_not_put_prompt_after_variadic_image_args(
+    tmp_path: Path,
+) -> None:
+    image_path = tmp_path / "reference.png"
+    image_path.write_bytes(b"png")
+
+    command = build_codex_exec_command(
+        codex_path="codex",
+        workdir=tmp_path,
+        output_path=tmp_path / "last-message.md",
+        prompt="Build this UI.",
+        image_paths=[image_path],
+    )
+
+    image_arg_index = command.index("--image") + 1
+
+    assert command[image_arg_index:] == [str(image_path)]
+    assert "Build this UI." not in command
 
 
 def test_prepare_codex_prompt_writes_data_url_images_and_preserves_text(

@@ -136,7 +136,6 @@ def build_codex_exec_command(
     for image_path in image_paths:
         command.extend(["--image", str(image_path)])
 
-    command.append(prompt)
     return command
 
 
@@ -184,11 +183,11 @@ class CodexCliProviderSession:
         )
         process = await asyncio.create_subprocess_exec(
             *command,
-            stdin=asyncio.subprocess.DEVNULL,
+            stdin=asyncio.subprocess.PIPE,
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.PIPE,
         )
-        stdout_bytes, stderr_bytes = await process.communicate()
+        stdout_bytes, stderr_bytes = await process.communicate(prompt.encode("utf-8"))
         stdout_text = stdout_bytes.decode("utf-8", errors="replace")
         stderr_text = stderr_bytes.decode("utf-8", errors="replace")
 
