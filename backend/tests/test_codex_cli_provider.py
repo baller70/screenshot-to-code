@@ -91,6 +91,7 @@ def test_prepare_codex_prompt_writes_data_url_images_and_preserves_text(
     assert "System rules" in prompt
     assert "Make it exact." in prompt
     assert "Screenshot-to-Code Factory" in prompt
+    assert "Create local asset files" in prompt
     assert len(image_paths) == 1
     assert image_paths[0].read_bytes() == b"fake-png"
     assert image_paths[0].parent == tmp_path
@@ -131,3 +132,32 @@ def test_finalize_codex_assistant_text_prefers_real_html_over_summary_file_block
 
     assert "<body>Real generated site</body>" in assistant_text
     assert "Completed runnable website" not in assistant_text
+
+
+def test_finalize_codex_assistant_text_inlines_generated_local_image_assets(
+    tmp_path: Path,
+) -> None:
+    assets_dir = tmp_path / "assets"
+    assets_dir.mkdir()
+    (assets_dir / "hero.png").write_bytes(b"fake-png")
+    (assets_dir / "card.jpg").write_bytes(b"fake-jpg")
+    (tmp_path / "index.html").write_text(
+        (
+            "<!DOCTYPE html><html><head><style>"
+            ".hero{background-image:url('assets/hero.png')}"
+            "</style></head><body>"
+            '<img src="assets/card.jpg" alt="Card">'
+            "</body></html>"
+        ),
+        encoding="utf-8",
+    )
+
+    assistant_text = finalize_codex_assistant_text(
+        "Built index.html with assets.",
+        tmp_path,
+    )
+
+    assert "data:image/png;base64,ZmFrZS1wbmc=" in assistant_text
+    assert "data:image/jpeg;base64,ZmFrZS1qcGc=" in assistant_text
+    assert "assets/hero.png" not in assistant_text
+    assert "assets/card.jpg" not in assistant_text

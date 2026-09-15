@@ -1,8 +1,10 @@
 import asyncio
 import base64
 import binascii
+import mimetypes
 import re
 import shutil
+from urllib.parse import unquote
 import uuid
 from pathlib import Path
 from typing import Any, Optional, cast
@@ -18,6 +20,12 @@ from agent.providers.base import (
 
 
 DATA_IMAGE_RE = re.compile(r"^data:image/([a-zA-Z0-9.+-]+);base64,(.*)$", re.DOTALL)
+LOCAL_ASSET_RE = re.compile(
+    r"(?P<prefix>(?:src|href)=['\"]|url\(['\"]?)"
+    r"(?P<path>(?!data:|https?:|//|#)[^'\"\)]+\.(?:png|jpe?g|webp|gif|svg))"
+    r"(?P<suffix>['\"]|\)?['\"]?\))",
+    re.IGNORECASE,
+)
 
 
 def is_codex_cli_available(codex_path: str = "codex") -> bool:
@@ -57,6 +65,9 @@ def prepare_codex_prompt_and_images(
 
 Return the completed page as a single full HTML document in a <file path="index.html">...</file> block.
 Do not return a partial snippet. Do not use the reference screenshot as a background image.
+Create local asset files from attached screenshots when cropped logos, photos, icons, or textures improve fidelity.
+Reference those generated local assets with relative paths; the provider will inline them for the preview.
+Prefer these local screenshot-derived assets over unrelated stock imagery.
 Preserve the user's selected stack instructions and visual fidelity requirements.""",
     ]
 
@@ -148,11 +159,41 @@ def _wrap_index_html(content: str) -> str:
     return f'<file path="index.html">\n{content}\n</file>'
 
 
+def _local_asset_to_data_url(asset_path: Path) -> str | None:
+    if not asset_path.exists() or not asset_path.is_file():
+        return None
+
+    mime_type = mimetypes.guess_type(asset_path.name)[0] or "application/octet-stream"
+    encoded = base64.b64encode(asset_path.read_bytes()).decode("ascii")
+    return f"data:{mime_type};base64,{encoded}"
+
+
+def _resolve_local_asset(workdir: Path, raw_path: str) -> Path | None:
+    candidate = (workdir / unquote(raw_path)).resolve()
+    try:
+        candidate.relative_to(workdir.resolve())
+    except ValueError:
+        return None
+    return candidate
+
+
+def inline_local_asset_references(content: str, workdir: Path) -> str:
+    def replace(match: re.Match[str]) -> str:
+        asset_path = _resolve_local_asset(workdir, match.group("path"))
+        data_url = _local_asset_to_data_url(asset_path) if asset_path else None
+        if data_url is None:
+            return match.group(0)
+        return f"{match.group('prefix')}{data_url}{match.group('suffix')}"
+
+    return LOCAL_ASSET_RE.sub(replace, content)
+
+
 def finalize_codex_assistant_text(assistant_text: str, workdir: Path) -> str:
     generated_index = workdir / "index.html"
     if generated_index.exists():
         html = generated_index.read_text(encoding="utf-8")
         if _looks_like_html_document(html):
+            html = inline_local_asset_references(html, workdir)
             return _wrap_index_html(html)
 
     if "<file" in assistant_text and "</file>" in assistant_text:
