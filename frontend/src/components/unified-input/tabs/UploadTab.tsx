@@ -38,6 +38,16 @@ type FileWithPreview = {
 } & File;
 
 const MAX_FILES = 5;
+const PACKET_ROLE_OPTIONS = [
+  "landing",
+  "home",
+  "programs",
+  "performance-lab",
+  "results",
+  "booking",
+  "dashboard",
+  "custom",
+];
 
 const isVideoFile = (file: File) =>
   file.type.startsWith("video/") ||
@@ -69,6 +79,8 @@ function UploadTab({ doCreate, stack, setStack, designSystem }: Props) {
   const [mirrorMode, setMirrorMode] = useState<MirrorModeConfig>(
     buildDefaultMirrorMode("image", 0)
   );
+  const [packetRoles, setPacketRoles] = useState<string[]>([]);
+  const [sidecarText, setSidecarText] = useState("");
   const [selectedIndex, setSelectedIndex] = useState(0);
   const textInputRef = useRef<HTMLTextAreaElement>(null);
   const filesRef = useRef<FileWithPreview[]>([]);
@@ -81,10 +93,19 @@ function UploadTab({ doCreate, stack, setStack, designSystem }: Props) {
 
   const handleGenerate = useCallback(() => {
     if (uploadedDataUrls.length > 0) {
+      const packetBlock =
+        uploadedInputMode === "image" &&
+        uploadedDataUrls.length > 1 &&
+        mirrorMode.enabled
+          ? buildPacketPromptBlock(packetRoles, sidecarText)
+          : "";
+      const promptWithPacket = [textPrompt.trim(), packetBlock]
+        .filter(Boolean)
+        .join("\n\n");
       doCreate(
         uploadedDataUrls,
         uploadedInputMode,
-        textPrompt,
+        promptWithPacket,
         isAssetExtractionEnabled,
         mirrorMode.enabled ? mirrorMode : undefined
       );
@@ -93,6 +114,8 @@ function UploadTab({ doCreate, stack, setStack, designSystem }: Props) {
     uploadedDataUrls,
     uploadedInputMode,
     textPrompt,
+    packetRoles,
+    sidecarText,
     isAssetExtractionEnabled,
     mirrorMode,
     doCreate,
@@ -120,6 +143,8 @@ function UploadTab({ doCreate, stack, setStack, designSystem }: Props) {
     setTextPrompt("");
     setUploadedInputMode("image");
     setMirrorMode(buildDefaultMirrorMode("image", 0));
+    setPacketRoles([]);
+    setSidecarText("");
     setSelectedIndex(0);
   };
 
@@ -182,10 +207,15 @@ function UploadTab({ doCreate, stack, setStack, designSystem }: Props) {
           setFiles(newFiles);
           setUploadedDataUrls(dataUrls as string[]);
           setUploadedInputMode("video");
+          setPacketRoles([]);
           setSelectedIndex(0);
         } else {
           setFiles((prev) => [...prev, ...newFiles]);
           setUploadedDataUrls((prev) => [...prev, ...(dataUrls as string[])]);
+          setPacketRoles((prev) => [
+            ...prev,
+            ...newFiles.map((_, index) => defaultPacketRole(prev.length + index)),
+          ]);
           setUploadedInputMode("image");
           if (files.length === 0) {
             setSelectedIndex(0);
@@ -296,6 +326,7 @@ function UploadTab({ doCreate, stack, setStack, designSystem }: Props) {
 
     setFiles((prev) => prev.filter((_, i) => i !== index));
     setUploadedDataUrls((prev) => prev.filter((_, i) => i !== index));
+    setPacketRoles((prev) => prev.filter((_, i) => i !== index));
     setSelectedIndex((prev) => {
       if (prev === index) {
         return Math.max(0, index - 1);
@@ -467,7 +498,23 @@ function UploadTab({ doCreate, stack, setStack, designSystem }: Props) {
           </div>
 
           {uploadedInputMode === "image" && uploadedDataUrls.length > 1 && (
-            <MirrorModeControls value={mirrorMode} onChange={setMirrorMode} />
+            <>
+              <MirrorModeControls value={mirrorMode} onChange={setMirrorMode} />
+              {mirrorMode.enabled && (
+                <PacketModeControls
+                  roles={packetRoles}
+                  sidecarText={sidecarText}
+                  onRoleChange={(index, role) =>
+                    setPacketRoles((prev) =>
+                      prev.map((value, roleIndex) =>
+                        roleIndex === index ? role : value
+                      )
+                    )
+                  }
+                  onSidecarTextChange={setSidecarText}
+                />
+              )}
+            </>
           )}
 
           <ScreenshotToCodeControls
@@ -507,6 +554,26 @@ function UploadTab({ doCreate, stack, setStack, designSystem }: Props) {
       )}
     </div>
   );
+}
+
+function defaultPacketRole(index: number) {
+  return PACKET_ROLE_OPTIONS[index] ?? "custom";
+}
+
+function buildPacketPromptBlock(packetRoles: string[], sidecarText: string) {
+  const roleLines = packetRoles.map(
+    (role, index) => `- Source ${index + 1}: ${role || defaultPacketRole(index)}`
+  );
+  const sidecarBlock = sidecarText.trim()
+    ? ["", "Sidecar metadata:", sidecarText.trim()]
+    : [];
+
+  return [
+    "ImageGen 2.5 packet metadata:",
+    ...roleLines,
+    "Use these roles as authoritative page intent when mapping screenshots to website routes.",
+    ...sidecarBlock,
+  ].join("\n");
 }
 
 function MirrorModeControls({
@@ -568,6 +635,57 @@ function MirrorModeControls({
           </div>
         </div>
       )}
+    </div>
+  );
+}
+
+function PacketModeControls({
+  roles,
+  sidecarText,
+  onRoleChange,
+  onSidecarTextChange,
+}: {
+  roles: string[];
+  sidecarText: string;
+  onRoleChange: (index: number, role: string) => void;
+  onSidecarTextChange: (value: string) => void;
+}) {
+  return (
+    <div className="w-full max-w-2xl rounded-xl border border-gray-200 bg-white shadow-sm dark:border-zinc-700 dark:bg-zinc-900">
+      <div className="border-b border-gray-100 px-4 py-3 dark:border-zinc-800 sm:px-5">
+        <div className="text-sm font-medium text-gray-700 dark:text-zinc-200">
+          Packet pages
+        </div>
+      </div>
+      <div className="grid gap-3 px-4 py-3 sm:grid-cols-2 sm:px-5">
+        {roles.map((role, index) => (
+          <label
+            key={index}
+            className="flex items-center justify-between gap-3 text-xs font-medium text-gray-500 dark:text-zinc-400"
+          >
+            <span>Image {index + 1}</span>
+            <select
+              value={role}
+              onChange={(event) => onRoleChange(index, event.target.value)}
+              className="h-8 rounded-md border border-gray-200 bg-white px-2 text-xs text-gray-700 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-200"
+            >
+              {PACKET_ROLE_OPTIONS.map((option) => (
+                <option key={option} value={option}>
+                  {option}
+                </option>
+              ))}
+            </select>
+          </label>
+        ))}
+      </div>
+      <div className="border-t border-gray-100 px-4 py-3 dark:border-zinc-800 sm:px-5">
+        <textarea
+          value={sidecarText}
+          onChange={(event) => onSidecarTextChange(event.target.value)}
+          placeholder="Paste ImageGen sidecar JSON or notes"
+          className="min-h-[92px] w-full resize-y rounded-md border border-gray-200 bg-white px-3 py-2 text-xs text-gray-700 outline-none focus:border-blue-400 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-200"
+        />
+      </div>
     </div>
   );
 }

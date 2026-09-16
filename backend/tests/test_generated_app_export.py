@@ -75,3 +75,45 @@ def test_build_generated_app_export_writes_manifest_and_fixtures() -> None:
     assert gates[0]["gateId"] == "route-registry"
     assert fixtures["routes"][0]["route"] == "#home"
     assert fixtures["submissions"] == []
+
+
+def test_build_generated_app_export_can_generate_sqlite_backend_adapter() -> None:
+    files = read_zip(
+        build_generated_app_export(
+            HTML,
+            app_name="Pulse Forge",
+            backend_adapter="sqlite",
+        )
+    )
+
+    assert "sqlite3" in files["pulse-forge/backend/main.py"]
+    assert "generated_app.db" in files["pulse-forge/backend/main.py"]
+    assert "Backend adapter: sqlite" in files["pulse-forge/README.md"]
+
+
+def test_build_generated_app_export_can_generate_postgres_backend_adapter() -> None:
+    files = read_zip(
+        build_generated_app_export(
+            HTML,
+            app_name="Pulse Forge",
+            backend_adapter="postgres",
+        )
+    )
+
+    assert "DATABASE_URL" in files["pulse-forge/backend/main.py"]
+    assert "Postgres adapter placeholder" in files["pulse-forge/backend/main.py"]
+    assert "Backend adapter: postgres" in files["pulse-forge/README.md"]
+
+
+def test_build_generated_app_export_can_generate_webhook_backend_adapter() -> None:
+    files = read_zip(
+        build_generated_app_export(
+            HTML,
+            app_name="Pulse Forge",
+            backend_adapter="webhook",
+        )
+    )
+
+    assert "WEBHOOK_URL" in files["pulse-forge/backend/main.py"]
+    assert "httpx.post" in files["pulse-forge/backend/main.py"]
+    assert "Backend adapter: webhook" in files["pulse-forge/README.md"]

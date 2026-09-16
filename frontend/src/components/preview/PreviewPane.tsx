@@ -10,6 +10,7 @@ import {
   LuExternalLink,
   LuRefreshCw,
   LuDownload,
+  LuClipboardCheck,
 } from "react-icons/lu";
 import { useMemo, useState } from "react";
 import { AppState, Settings } from "../../types";
@@ -19,7 +20,11 @@ import { useAppStore } from "../../store/app-store";
 import { useProjectStore } from "../../store/project-store";
 import { extractHtml } from "./extractHtml";
 import PreviewComponent from "./PreviewComponent";
-import { downloadCode, downloadGeneratedApp } from "./download";
+import {
+  downloadCode,
+  downloadGeneratedApp,
+  downloadGeneratedAppReport,
+} from "./download";
 import { SelectAndEditToolbarButton } from "../select-and-edit/SelectAndEditControls";
 import { normalizeBabelCdn } from "../../lib/babelCdn";
 import ImageScanningPreview from "./ImageScanningPreview";
@@ -50,6 +55,7 @@ function PreviewPane({ settings, onOpenVersions }: Props) {
   const [activeTab, setActiveTab] = useState("desktop");
   const [desktopScale, setDesktopScale] = useState(1);
   const [desktopViewMode, setDesktopViewMode] = useState<"fit" | "actual">("fit");
+  const [backendAdapter, setBackendAdapter] = useState("fixture");
 
   // Sorted commit list for version navigation
   const sortedCommits = useMemo(() =>
@@ -206,7 +212,29 @@ function PreviewPane({ settings, onOpenVersions }: Props) {
             {(appState === AppState.CODE_READY || isSelectedVariantComplete) && (
               <>
                 <Button
-                  onClick={() => downloadGeneratedApp(previewCode)}
+                  onClick={() => downloadGeneratedAppReport(previewCode)}
+                  variant="ghost"
+                  size="icon"
+                  title="Download generated app quality report"
+                  className="h-9 w-9"
+                  data-testid="download-generated-app-report"
+                >
+                  <LuClipboardCheck />
+                </Button>
+                <select
+                  value={backendAdapter}
+                  onChange={(event) => setBackendAdapter(event.target.value)}
+                  title="Generated backend adapter"
+                  className="hidden h-8 rounded-md border border-gray-200 bg-white px-2 text-xs text-gray-600 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-300 sm:block"
+                  data-testid="generated-app-backend-adapter"
+                >
+                  <option value="fixture">Fixture</option>
+                  <option value="sqlite">SQLite</option>
+                  <option value="postgres">Postgres</option>
+                  <option value="webhook">Webhook</option>
+                </select>
+                <Button
+                  onClick={() => downloadGeneratedApp(previewCode, "generated-website", backendAdapter)}
                   variant="ghost"
                   title="Download generated website project"
                   className="h-9 px-2 gap-1 text-xs"

@@ -1,3 +1,4 @@
+# pyright: reportUnknownVariableType=false
 import asyncio
 import base64
 from dataclasses import dataclass
@@ -17,8 +18,11 @@ from fastapi.responses import Response
 from pydantic import BaseModel
 
 from babel_cdn import normalize_babel_cdn
-from generated_app.exporter import build_generated_app_export
+from generated_app.exporter import BackendAdapter, build_generated_app_export
+from generated_app.history import BuildReport, append_build_report, list_build_reports
 from generated_app.repair import audit_generated_app_html
+from generated_app.repair_loop import build_repair_loop_report
+from generated_app.visual_diff import VisualDiffReport
 
 router = APIRouter()
 
@@ -69,11 +73,19 @@ class ExportRequest(BaseModel):
 class GeneratedAppExportRequest(BaseModel):
     code: str
     appName: str = "generated-app"
+    backendAdapter: BackendAdapter = "fixture"
 
 
 class GeneratedAppAuditRequest(BaseModel):
     code: str
     smokeReport: dict[str, Any] | None = None
+
+
+class GeneratedAppRepairLoopRequest(BaseModel):
+    code: str
+    smokeReport: dict[str, Any] | None = None
+    visualReport: VisualDiffReport | None = None
+    attempt: int = 1
 
 
 @dataclass(frozen=True)
@@ -508,6 +520,7 @@ async def export_generated_app(request: GeneratedAppExportRequest) -> Response:
     zip_content = build_generated_app_export(
         normalize_babel_cdn(request.code),
         app_name=request.appName,
+        backend_adapter=request.backendAdapter,
     )
     return Response(
         content=zip_content,
@@ -525,3 +538,27 @@ async def audit_generated_app(request: GeneratedAppAuditRequest) -> dict:
         smoke_report=request.smokeReport,
     )
     return audit.model_dump(by_alias=True)
+
+
+@router.post("/api/generated-app/repair-loop")
+async def repair_loop_generated_app(request: GeneratedAppRepairLoopRequest) -> dict:
+    report = build_repair_loop_report(
+        normalize_babel_cdn(request.code),
+        smoke_report=request.smokeReport,
+        visual_report=request.visualReport,
+        attempt=request.attempt,
+    )
+    return report.model_dump(by_alias=True)
+
+
+@router.post("/api/generated-app/history")
+async def create_generated_app_history(report: BuildReport) -> dict:
+    return append_build_report(report).model_dump(by_alias=True)
+
+
+@router.get("/api/generated-app/history")
+async def get_generated_app_history(limit: int = 25) -> list[dict]:
+    return [
+        report.model_dump(by_alias=True)
+        for report in list_build_reports(limit=limit)
+    ]
