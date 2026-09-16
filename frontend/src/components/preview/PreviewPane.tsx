@@ -19,7 +19,7 @@ import { useAppStore } from "../../store/app-store";
 import { useProjectStore } from "../../store/project-store";
 import { extractHtml } from "./extractHtml";
 import PreviewComponent from "./PreviewComponent";
-import { downloadCode } from "./download";
+import { downloadCode, downloadGeneratedApp } from "./download";
 import { SelectAndEditToolbarButton } from "../select-and-edit/SelectAndEditControls";
 import { normalizeBabelCdn } from "../../lib/babelCdn";
 import ImageScanningPreview from "./ImageScanningPreview";
@@ -204,16 +204,28 @@ function PreviewPane({ settings, onOpenVersions }: Props) {
                 <SelectAndEditToolbarButton />
               )}
             {(appState === AppState.CODE_READY || isSelectedVariantComplete) && (
-              <Button
-                onClick={() => downloadCode(previewCode)}
-                variant="ghost"
-                size="icon"
-                title="Download Code"
-                className="h-9 w-9"
-                data-testid="download-code"
-              >
-                <LuDownload />
-              </Button>
+              <>
+                <Button
+                  onClick={() => downloadGeneratedApp(previewCode)}
+                  variant="ghost"
+                  title="Download generated website project"
+                  className="h-9 px-2 gap-1 text-xs"
+                  data-testid="download-generated-app"
+                >
+                  <LuDownload />
+                  Project
+                </Button>
+                <Button
+                  onClick={() => downloadCode(previewCode)}
+                  variant="ghost"
+                  size="icon"
+                  title="Download HTML/assets"
+                  className="h-9 w-9"
+                  data-testid="download-code"
+                >
+                  <LuDownload />
+                </Button>
+              </>
             )}
             <Button
               onClick={() => {

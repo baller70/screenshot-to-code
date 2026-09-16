@@ -305,6 +305,35 @@ class TestCreatePrompt:
         assert "Backend contract" in text
 
     @pytest.mark.asyncio
+    async def test_image_mode_create_includes_sidecar_metadata(self) -> None:
+        messages = await build_prompt_messages(
+            stack=self.TEST_STACK,
+            input_mode="image",
+            generation_type="create",
+            prompt={
+                "text": "",
+                "images": [self.TEST_IMAGE_URL],
+                "videos": [],
+                "sidecars": ['{"screenId":"home","route":"#home"}'],
+            },
+            history=[],
+        )
+
+        user_content = messages[1].get("content")
+        assert isinstance(user_content, list)
+        text_part = next(
+            part
+            for part in user_content
+            if isinstance(part, dict) and part.get("type") == "text"
+        )
+        text = text_part.get("text")
+        assert isinstance(text, str)
+
+        assert "## ImageGen sidecar metadata" in text
+        assert "authoritative" in text
+        assert '"screenId": "home"' in text
+
+    @pytest.mark.asyncio
     async def test_image_mode_create_with_image_generation_disabled(self) -> None:
         params: Dict[str, Any] = {
             "prompt": {"text": "", "images": [self.TEST_IMAGE_URL]},

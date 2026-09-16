@@ -22,6 +22,10 @@ def parse_prompt_content(raw_prompt: object) -> UserTurnInput:
         "videos": _to_string_list(prompt_dict.get("videos")),
     }
 
+    sidecars = _to_string_list(prompt_dict.get("sidecars"))
+    if sidecars:
+        parsed["sidecars"] = sidecars
+
     full_text = prompt_dict.get("fullText")
     if isinstance(full_text, str) and full_text.strip():
         parsed["full_text"] = full_text

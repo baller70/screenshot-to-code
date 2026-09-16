@@ -173,7 +173,7 @@ describeE2E("qa e2e flows", () => {
     );
   });
 
-  // Buttons (Download Code, Copy Code, Open in Codepen)
+  // Buttons (Download Project, Download Code, Copy Code, Open in Codepen)
   models.forEach((model) => {
     it(
       `code action buttons: ${model}`,
@@ -343,6 +343,7 @@ class App {
   }
 
   async assertCodeActions() {
+    await this.page.click('[data-testid="download-generated-app"]');
     await this.page.click('[data-testid="tab-code"]');
     await this.page.waitForSelector('[data-testid="copy-code"]', {
       timeout: 10000,
@@ -358,6 +359,7 @@ class App {
     }));
 
     expect(results.downloads).toContain("index.html");
+    expect(results.downloads).toContain("generated-app-export.zip");
     expect(results.submits).toContain("https://codepen.io/pen/define");
     expect(results.clipboard).toContain("copy");
   }
@@ -398,6 +400,20 @@ async function setupRequestInterception(
             'attachment; filename="screenshot-to-code-export.zip"',
         },
         body: "mock export",
+      });
+      return;
+    }
+    if (url.endsWith("/api/export/generated-app")) {
+      request.respond({
+        status: 200,
+        contentType: "application/zip",
+        headers: {
+          "Access-Control-Allow-Origin": "*",
+          "Access-Control-Allow-Headers": "*",
+          "Content-Disposition":
+            'attachment; filename="generated-app-export.zip"',
+        },
+        body: "mock generated app export",
       });
       return;
     }

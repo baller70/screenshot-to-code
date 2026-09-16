@@ -13,6 +13,7 @@ class UserTurnInput(_UserTurnInputRequired, total=False):
     # Full instruction for the model when it differs from the display text
     # (e.g. includes the selected-element reference, built by the frontend).
     full_text: str
+    sidecars: List[str]
 
 
 class PromptHistoryMessage(TypedDict):

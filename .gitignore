@@ -29,3 +29,4 @@ walkthrough/
 stress-tests/*
 !stress-tests/run_imagegen_packet_ws.py
 !stress-tests/capture_html_routes.mjs
+!stress-tests/smoke_generated_app.mjs

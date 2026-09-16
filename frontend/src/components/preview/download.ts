@@ -47,3 +47,29 @@ export const downloadCode = async (code: string) => {
     );
   }
 };
+
+export const downloadGeneratedApp = async (
+  code: string,
+  appName = "generated-website"
+) => {
+  const response = await fetch(`${HTTP_BACKEND_URL}/api/export/generated-app`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      code: normalizeBabelCdn(code),
+      appName,
+    }),
+  });
+
+  if (!response.ok) {
+    throw new Error(`Generated app export failed with status ${response.status}`);
+  }
+
+  const blob = await response.blob();
+  downloadBlob(
+    blob,
+    filenameFromContentDisposition(response.headers.get("Content-Disposition"))
+  );
+};

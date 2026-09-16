@@ -24,6 +24,7 @@ def build_create_prompt_from_input(
             image_generation_enabled=image_generation_enabled,
             design_system=design_system,
             mirror_mode=mirror_mode,
+            sidecar_texts=prompt.get("sidecars", []),
         )
     if input_mode == "text":
         return build_text_prompt_messages(

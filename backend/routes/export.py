@@ -5,7 +5,7 @@ from io import BytesIO
 import ipaddress
 import re
 import socket
-from typing import Iterable
+from typing import Any, Iterable
 from urllib.parse import unquote_to_bytes, urljoin, urlparse
 from zipfile import ZIP_DEFLATED, ZipFile
 
@@ -17,6 +17,8 @@ from fastapi.responses import Response
 from pydantic import BaseModel
 
 from babel_cdn import normalize_babel_cdn
+from generated_app.exporter import build_generated_app_export
+from generated_app.repair import audit_generated_app_html
 
 router = APIRouter()
 
@@ -62,6 +64,16 @@ MAX_REDIRECTS = 5
 class ExportRequest(BaseModel):
     code: str
     baseUrl: str | None = None
+
+
+class GeneratedAppExportRequest(BaseModel):
+    code: str
+    appName: str = "generated-app"
+
+
+class GeneratedAppAuditRequest(BaseModel):
+    code: str
+    smokeReport: dict[str, Any] | None = None
 
 
 @dataclass(frozen=True)
@@ -489,3 +501,27 @@ async def export_code(request: ExportRequest) -> Response:
             "Content-Disposition": 'attachment; filename="screenshot-to-code-export.zip"'
         },
     )
+
+
+@router.post("/api/export/generated-app")
+async def export_generated_app(request: GeneratedAppExportRequest) -> Response:
+    zip_content = build_generated_app_export(
+        normalize_babel_cdn(request.code),
+        app_name=request.appName,
+    )
+    return Response(
+        content=zip_content,
+        media_type="application/zip",
+        headers={
+            "Content-Disposition": 'attachment; filename="generated-app-export.zip"'
+        },
+    )
+
+
+@router.post("/api/generated-app/audit")
+async def audit_generated_app(request: GeneratedAppAuditRequest) -> dict:
+    audit = audit_generated_app_html(
+        normalize_babel_cdn(request.code),
+        smoke_report=request.smokeReport,
+    )
+    return audit.model_dump(by_alias=True)
