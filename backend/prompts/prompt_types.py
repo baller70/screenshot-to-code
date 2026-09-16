@@ -24,6 +24,22 @@ class PromptHistoryMessage(TypedDict):
     videos: List[str]
 
 
+TargetFidelity = Literal["standard", "strict", "pixel"]
+
+
+class MirrorModeConfig(TypedDict):
+    """Controls for ImageGen packet reconstruction and fidelity proofing."""
+
+    enabled: bool
+    packet_mode: bool
+    sidecar_mode: bool
+    asset_registry: bool
+    route_registry: bool
+    backend_contract: bool
+    visual_repair: bool
+    target_fidelity: TargetFidelity
+
+
 PromptConstructionStrategy = Literal[
     "create_from_input",
     "update_from_history",

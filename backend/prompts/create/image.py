@@ -1,8 +1,9 @@
 from openai.types.chat import ChatCompletionContentPartParam, ChatCompletionMessageParam
 
-from prompts.prompt_types import Stack
+from prompts.prompt_types import MirrorModeConfig, Stack
 from prompts import system_prompt
 from prompts.design_system import build_design_system_prompt_block
+from prompts.mirror_mode import build_mirror_mode_prompt_block
 from prompts.policies import build_selected_stack_policy, build_user_image_policy
 
 def build_image_prompt_messages(
@@ -11,10 +12,15 @@ def build_image_prompt_messages(
     text_prompt: str,
     image_generation_enabled: bool,
     design_system: str | None = None,
+    mirror_mode: MirrorModeConfig | None = None,
 ) -> list[ChatCompletionMessageParam]:
     image_policy = build_user_image_policy(image_generation_enabled)
     selected_stack = build_selected_stack_policy(stack)
     design_system_block = build_design_system_prompt_block(design_system)
+    mirror_mode_block = build_mirror_mode_prompt_block(
+        mirror_mode,
+        screenshot_count=len(image_data_urls),
+    )
     website_mode_instruction = (
         """
 Build a complete navigable website from the provided screenshots.
@@ -32,6 +38,7 @@ The generated result must be a runnable website that users can click through in 
 
 {selected_stack}
 {design_system_block}
+{mirror_mode_block}
 
 ## Replication instructions
 

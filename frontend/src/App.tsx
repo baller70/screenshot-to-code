@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { generateCode } from "./generateCode";
-import { AppState, AppTheme, EditorTheme, Settings } from "./types";
+import { AppState, AppTheme, EditorTheme, MirrorModeConfig, Settings } from "./types";
 import { NEW_DESIGN_SYSTEM_CONTENT } from "./lib/design-systems";
 import { IS_RUNNING_ON_CLOUD } from "./config";
 import { OnboardingNote } from "./components/messages/OnboardingNote";
@@ -29,6 +29,7 @@ import {
   buildSelectedElementInstruction,
   describeElementContext,
 } from "./components/select-and-edit/utils";
+import { buildDefaultMirrorMode } from "./lib/mirror-mode";
 import { useEscapeToExitSelectMode } from "./components/select-and-edit/useEscapeToExitSelectMode";
 import Sidebar from "./components/sidebar/Sidebar";
 import IconStrip from "./components/sidebar/IconStrip";
@@ -572,7 +573,8 @@ function App() {
     referenceImages: string[],
     inputMode: "image" | "video",
     textPrompt: string = "",
-    isAssetExtractionEnabled = true
+    isAssetExtractionEnabled = true,
+    mirrorMode?: MirrorModeConfig
   ) {
     // Reset any existing state
     reset();
@@ -621,6 +623,7 @@ function App() {
         // instead of letting the agent try to crop a video payload.
         isAssetExtractionEnabled:
           inputMode === "image" && isAssetExtractionEnabled,
+        mirrorMode: mirrorMode ?? buildDefaultMirrorMode(inputMode, media.length),
         variantHistory,
       });
     }

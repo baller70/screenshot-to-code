@@ -261,6 +261,46 @@ class TestCreatePrompt:
         assert "Do not output a gallery of screenshots" in text
 
     @pytest.mark.asyncio
+    async def test_image_mode_create_includes_mirror_mode_contract(self) -> None:
+        messages = await build_prompt_messages(
+            stack=self.TEST_STACK,
+            input_mode="image",
+            generation_type="create",
+            prompt={
+                "text": "",
+                "images": [self.TEST_IMAGE_URL, self.RESULT_IMAGE_URL],
+                "videos": [],
+            },
+            history=[],
+            mirror_mode={
+                "enabled": True,
+                "packet_mode": True,
+                "sidecar_mode": True,
+                "asset_registry": True,
+                "route_registry": True,
+                "backend_contract": True,
+                "visual_repair": True,
+                "target_fidelity": "strict",
+            },
+        )
+
+        user_content = messages[1].get("content")
+        assert isinstance(user_content, list)
+        text_part = next(
+            part
+            for part in user_content
+            if isinstance(part, dict) and part.get("type") == "text"
+        )
+        text = text_part.get("text")
+        assert isinstance(text, str)
+
+        assert "## ImageGen 2.5 mirror contract" in text
+        assert "Create a route registry" in text
+        assert "Create an asset registry" in text
+        assert "Prepare the output for visual repair" in text
+        assert "Backend contract" in text
+
+    @pytest.mark.asyncio
     async def test_image_mode_create_with_image_generation_disabled(self) -> None:
         params: Dict[str, Any] = {
             "prompt": {"text": "", "images": [self.TEST_IMAGE_URL]},

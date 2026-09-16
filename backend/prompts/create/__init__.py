@@ -2,7 +2,7 @@ from custom_types import InputMode
 from prompts.create.image import build_image_prompt_messages
 from prompts.create.text import build_text_prompt_messages
 from prompts.create.video import build_video_prompt_messages
-from prompts.prompt_types import Stack, UserTurnInput
+from prompts.prompt_types import MirrorModeConfig, Stack, UserTurnInput
 from prompts.message_builder import Prompt
 
 
@@ -12,6 +12,7 @@ def build_create_prompt_from_input(
     prompt: UserTurnInput,
     image_generation_enabled: bool,
     design_system: str | None = None,
+    mirror_mode: MirrorModeConfig | None = None,
 ) -> Prompt:
     if input_mode == "image":
         image_urls = prompt.get("images", [])
@@ -22,6 +23,7 @@ def build_create_prompt_from_input(
             text_prompt=text_prompt,
             image_generation_enabled=image_generation_enabled,
             design_system=design_system,
+            mirror_mode=mirror_mode,
         )
     if input_mode == "text":
         return build_text_prompt_messages(

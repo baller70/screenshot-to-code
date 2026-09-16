@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../ui/tabs";
 import { Stack } from "../../lib/stacks";
-import { DesignSystem, Settings } from "../../types";
+import { DesignSystem, MirrorModeConfig, Settings } from "../../types";
 import UploadTab from "./tabs/UploadTab";
 import UrlTab from "./tabs/UrlTab";
 import TextTab from "./tabs/TextTab";
@@ -13,7 +13,8 @@ interface Props {
     images: string[],
     inputMode: "image" | "video",
     textPrompt?: string,
-    isAssetExtractionEnabled?: boolean
+    isAssetExtractionEnabled?: boolean,
+    mirrorMode?: MirrorModeConfig
   ) => void;
   doCreateFromText: (text: string) => void;
   importFromCode: (code: string, stack: Stack) => void;

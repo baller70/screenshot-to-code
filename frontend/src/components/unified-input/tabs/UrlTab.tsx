@@ -6,6 +6,7 @@ import { toast } from "react-hot-toast";
 import { DesignSystemSelectorProps } from "../../settings/DesignSystemSelector";
 import { Stack } from "../../../lib/stacks";
 import ScreenshotToCodeControls from "../ScreenshotToCodeControls";
+import { MirrorModeConfig } from "../../../types";
 
 interface Props {
   screenshotOneApiKey: string | null;
@@ -14,6 +15,7 @@ interface Props {
     inputMode: "image" | "video",
     textPrompt?: string,
     isAssetExtractionEnabled?: boolean,
+    mirrorMode?: MirrorModeConfig,
   ) => void;
   stack: Stack;
   setStack: (stack: Stack) => void;

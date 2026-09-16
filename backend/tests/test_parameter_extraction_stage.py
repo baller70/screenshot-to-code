@@ -109,3 +109,37 @@ async def test_extracts_design_system_from_request() -> None:
     )
 
     assert extracted.design_system == "Reuse .mockup-frame"
+
+
+@pytest.mark.asyncio
+async def test_extracts_mirror_mode_contract_from_request() -> None:
+    stage = ParameterExtractionStage(AsyncMock())
+
+    extracted = await stage.extract_and_validate(
+        {
+            "generatedCodeConfig": "html_tailwind",
+            "inputMode": "image",
+            "prompt": {"text": "Build the site", "images": ["data:image/png;base64,a"]},
+            "mirrorMode": {
+                "enabled": True,
+                "packetMode": True,
+                "sidecarMode": True,
+                "assetRegistry": True,
+                "routeRegistry": True,
+                "backendContract": True,
+                "visualRepair": True,
+                "targetFidelity": "strict",
+            },
+        }
+    )
+
+    assert extracted.mirror_mode == {
+        "enabled": True,
+        "packet_mode": True,
+        "sidecar_mode": True,
+        "asset_registry": True,
+        "route_registry": True,
+        "backend_contract": True,
+        "visual_repair": True,
+        "target_fidelity": "strict",
+    }

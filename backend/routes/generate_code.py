@@ -57,7 +57,8 @@ MessageType = Literal[
 ]
 from prompts.pipeline import build_prompt_messages
 from prompts.request_parsing import parse_prompt_content, parse_prompt_history
-from prompts.prompt_types import PromptHistoryMessage, Stack, UserTurnInput
+from prompts.prompt_types import MirrorModeConfig, PromptHistoryMessage, Stack, UserTurnInput
+from prompts.mirror_mode import parse_mirror_mode
 from uploaded_assets import (
     append_uploaded_asset_ids_to_history,
     append_uploaded_asset_ids_to_prompt,
@@ -271,6 +272,7 @@ class ExtractedParams:
     should_extract_assets: bool = True
     asset_base_url: str = ""
     design_system: str | None = None
+    mirror_mode: MirrorModeConfig | None = None
 
 
 class ParameterExtractionStage:
@@ -375,6 +377,7 @@ class ParameterExtractionStage:
             if isinstance(raw_design_system, str) and raw_design_system.strip()
             else None
         )
+        mirror_mode = parse_mirror_mode(params.get("mirrorMode"))
 
         return ExtractedParams(
             stack=validated_stack,
@@ -393,6 +396,7 @@ class ParameterExtractionStage:
             option_codes=option_codes,
             asset_base_url=self.asset_base_url,
             design_system=design_system,
+            mirror_mode=mirror_mode,
         )
 
     def _get_from_settings_dialog_or_env(
@@ -524,6 +528,7 @@ class PromptCreationStage:
                 file_state=extracted_params.file_state,
                 image_generation_enabled=extracted_params.should_generate_images,
                 design_system=extracted_params.design_system,
+                mirror_mode=extracted_params.mirror_mode,
             )
             print_prompt_preview(prompt_messages)
 

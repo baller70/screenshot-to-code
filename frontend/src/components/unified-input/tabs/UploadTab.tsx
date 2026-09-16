@@ -2,11 +2,13 @@ import { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import { useDropzone } from "react-dropzone";
 import { toast } from "react-hot-toast";
 import { Cross2Icon, ImageIcon } from "@radix-ui/react-icons";
-import { ScreenRecorderState } from "../../../types";
+import { MirrorModeConfig, ScreenRecorderState } from "../../../types";
 import ScreenRecorder from "../../recording/ScreenRecorder";
 import { DesignSystemSelectorProps } from "../../settings/DesignSystemSelector";
 import { Stack } from "../../../lib/stacks";
 import ScreenshotToCodeControls from "../ScreenshotToCodeControls";
+import { Checkbox } from "../../ui/checkbox";
+import { buildDefaultMirrorMode } from "../../../lib/mirror-mode";
 
 function fileToDataURL(file: File): Promise<string> {
   return new Promise((resolve, reject) => {
@@ -48,7 +50,8 @@ interface Props {
     referenceImages: string[],
     inputMode: "image" | "video",
     textPrompt?: string,
-    isAssetExtractionEnabled?: boolean
+    isAssetExtractionEnabled?: boolean,
+    mirrorMode?: MirrorModeConfig
   ) => void;
   stack: Stack;
   setStack: (stack: Stack) => void;
@@ -63,6 +66,9 @@ function UploadTab({ doCreate, stack, setStack, designSystem }: Props) {
   >("image");
   const [textPrompt, setTextPrompt] = useState("");
   const [isAssetExtractionEnabled, setIsAssetExtractionEnabled] = useState(true);
+  const [mirrorMode, setMirrorMode] = useState<MirrorModeConfig>(
+    buildDefaultMirrorMode("image", 0)
+  );
   const [selectedIndex, setSelectedIndex] = useState(0);
   const textInputRef = useRef<HTMLTextAreaElement>(null);
   const filesRef = useRef<FileWithPreview[]>([]);
@@ -79,7 +85,8 @@ function UploadTab({ doCreate, stack, setStack, designSystem }: Props) {
         uploadedDataUrls,
         uploadedInputMode,
         textPrompt,
-        isAssetExtractionEnabled
+        isAssetExtractionEnabled,
+        mirrorMode.enabled ? mirrorMode : undefined
       );
     }
   }, [
@@ -87,6 +94,7 @@ function UploadTab({ doCreate, stack, setStack, designSystem }: Props) {
     uploadedInputMode,
     textPrompt,
     isAssetExtractionEnabled,
+    mirrorMode,
     doCreate,
   ]);
 
@@ -111,6 +119,7 @@ function UploadTab({ doCreate, stack, setStack, designSystem }: Props) {
     setFiles([]);
     setTextPrompt("");
     setUploadedInputMode("image");
+    setMirrorMode(buildDefaultMirrorMode("image", 0));
     setSelectedIndex(0);
   };
 
@@ -243,6 +252,10 @@ function UploadTab({ doCreate, stack, setStack, designSystem }: Props) {
   useEffect(() => {
     filesRef.current = files;
   }, [files]);
+
+  useEffect(() => {
+    setMirrorMode(buildDefaultMirrorMode(uploadedInputMode, uploadedDataUrls.length));
+  }, [uploadedDataUrls.length, uploadedInputMode]);
 
   useEffect(() => {
     return () => filesRef.current.forEach((file) => URL.revokeObjectURL(file.preview));
@@ -453,6 +466,10 @@ function UploadTab({ doCreate, stack, setStack, designSystem }: Props) {
             )}
           </div>
 
+          {uploadedInputMode === "image" && uploadedDataUrls.length > 1 && (
+            <MirrorModeControls value={mirrorMode} onChange={setMirrorMode} />
+          )}
+
           <ScreenshotToCodeControls
             textPrompt={textPrompt}
             onTextPromptChange={setTextPrompt}
@@ -486,6 +503,69 @@ function UploadTab({ doCreate, stack, setStack, designSystem }: Props) {
             setStack={setStack}
             designSystem={designSystem}
           />
+        </div>
+      )}
+    </div>
+  );
+}
+
+function MirrorModeControls({
+  value,
+  onChange,
+}: {
+  value: MirrorModeConfig;
+  onChange: (value: MirrorModeConfig) => void;
+}) {
+  const update = (patch: Partial<MirrorModeConfig>) => {
+    onChange({ ...value, ...patch });
+  };
+
+  const toggle = (key: keyof Omit<MirrorModeConfig, "targetFidelity">) => {
+    update({ [key]: !value[key] } as Partial<MirrorModeConfig>);
+  };
+
+  const detailControls = [
+    ["packetMode", "Packet routes"],
+    ["sidecarMode", "Sidecar overlay"],
+    ["assetRegistry", "Asset registry"],
+    ["routeRegistry", "Route registry"],
+    ["backendContract", "Backend contract"],
+    ["visualRepair", "Repair markers"],
+  ] as const;
+
+  return (
+    <div className="w-full max-w-2xl rounded-xl border border-gray-200 bg-white shadow-sm dark:border-zinc-700 dark:bg-zinc-900">
+      <label className="flex cursor-pointer items-center gap-3 px-4 py-3 sm:px-5">
+        <span className="min-w-0 flex-1">
+          <span className="block text-sm font-medium text-gray-700 dark:text-zinc-200">
+            ImageGen 2.5 mirror mode
+          </span>
+          <span className="mt-0.5 block text-xs text-gray-400 dark:text-zinc-500">
+            Build one website packet with routes, assets, backend hooks, and repair-ready IDs.
+          </span>
+        </span>
+        <Checkbox
+          checked={value.enabled}
+          onCheckedChange={(checked) => update({ enabled: checked === true })}
+        />
+      </label>
+
+      {value.enabled && (
+        <div className="border-t border-gray-100 px-4 py-3 dark:border-zinc-800 sm:px-5">
+          <div className="grid gap-2 sm:grid-cols-2">
+            {detailControls.map(([key, label]) => (
+              <label
+                key={key}
+                className="flex cursor-pointer items-center gap-2 text-xs font-medium text-gray-500 dark:text-zinc-400"
+              >
+                <Checkbox
+                  checked={value[key]}
+                  onCheckedChange={() => toggle(key)}
+                />
+                {label}
+              </label>
+            ))}
+          </div>
         </div>
       )}
     </div>

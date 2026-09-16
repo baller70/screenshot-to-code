@@ -67,6 +67,19 @@ export interface PromptContent {
   selectedElementHtml?: string; // Raw HTML of selected element (for display only)
 }
 
+export type TargetFidelity = "standard" | "strict" | "pixel";
+
+export interface MirrorModeConfig {
+  enabled: boolean;
+  packetMode: boolean;
+  sidecarMode: boolean;
+  assetRegistry: boolean;
+  routeRegistry: boolean;
+  backendContract: boolean;
+  visualRepair: boolean;
+  targetFidelity: TargetFidelity;
+}
+
 export interface PromptHistoryMessage {
   role: PromptMessageRole;
   text: string;
@@ -85,6 +98,7 @@ export interface CodeGenerationParams {
   };
   optionCodes?: string[];
   isAssetExtractionEnabled?: boolean;
+  mirrorMode?: MirrorModeConfig;
 }
 
 export type FullGenerationSettings = CodeGenerationParams &

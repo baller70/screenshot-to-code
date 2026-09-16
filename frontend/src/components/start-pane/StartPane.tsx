@@ -1,5 +1,5 @@
 import React from "react";
-import { DesignSystem, Settings } from "../../types";
+import { DesignSystem, MirrorModeConfig, Settings } from "../../types";
 import { Stack } from "../../lib/stacks";
 import UnifiedInputPane from "../unified-input/UnifiedInputPane";
 
@@ -8,7 +8,8 @@ interface Props {
     images: string[],
     inputMode: "image" | "video",
     textPrompt?: string,
-    isAssetExtractionEnabled?: boolean
+    isAssetExtractionEnabled?: boolean,
+    mirrorMode?: MirrorModeConfig
   ) => void;
   doCreateFromText: (text: string) => void;
   importFromCode: (code: string, stack: Stack) => void;

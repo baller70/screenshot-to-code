@@ -1,7 +1,7 @@
 from custom_types import InputMode
 from prompts.create import build_create_prompt_from_input
 from prompts.plan import derive_prompt_construction_plan
-from prompts.prompt_types import PromptHistoryMessage, Stack, UserTurnInput
+from prompts.prompt_types import MirrorModeConfig, PromptHistoryMessage, Stack, UserTurnInput
 from prompts.message_builder import Prompt
 from prompts.update import (
     build_update_prompt_from_file_snapshot,
@@ -18,6 +18,7 @@ async def build_prompt_messages(
     file_state: dict[str, str] | None = None,
     image_generation_enabled: bool = True,
     design_system: str | None = None,
+    mirror_mode: MirrorModeConfig | None = None,
 ) -> Prompt:
     plan = derive_prompt_construction_plan(
         stack=stack,
@@ -50,4 +51,5 @@ async def build_prompt_messages(
         prompt,
         image_generation_enabled,
         design_system,
+        mirror_mode,
     )
