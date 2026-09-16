@@ -8,6 +8,7 @@ from agent.providers.codex_cli import (
     build_codex_exec_command,
     finalize_codex_assistant_text,
     prepare_codex_prompt_and_images,
+    extract_codex_error_message,
 )
 
 
@@ -31,15 +32,34 @@ def test_build_codex_exec_command_uses_safe_noninteractive_defaults(
     assert command[:2] == ["codex", "--ask-for-approval"]
     assert command[command.index("--ask-for-approval") + 1] == "never"
     assert command[command.index("--sandbox") + 1] == "workspace-write"
+    assert command.count("--disable") == 3
+    assert "plugins" in command
+    assert "remote_plugin" in command
+    assert "apps" in command
     assert "exec" in command
     assert "--json" in command
     assert "--ephemeral" in command
+    assert "--ignore-user-config" in command
     assert "--skip-git-repo-check" in command
     assert command[command.index("--image") + 1] == str(image_path)
     assert command[command.index("--output-last-message") + 1] == str(output_path)
     assert command[command.index("--model") + 1] == "gpt-5.6-sol"
     assert command[command.index("--profile") + 1] == "factory"
     assert "Build this UI." not in command
+
+
+def test_extract_codex_error_prefers_json_error_over_stdin_notice() -> None:
+    stdout = (
+        '{"type":"thread.started","thread_id":"t"}\n'
+        '{"type":"error","message":"You have hit your usage limit."}\n'
+        '{"type":"turn.failed","error":{"message":"Same limit."}}\n'
+    )
+    stderr = "Reading prompt from stdin...\n"
+
+    assert (
+        extract_codex_error_message(stdout_text=stdout, stderr_text=stderr)
+        == "You have hit your usage limit."
+    )
 
 
 def test_build_codex_exec_command_does_not_put_prompt_after_variadic_image_args(

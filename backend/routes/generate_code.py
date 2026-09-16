@@ -594,6 +594,7 @@ class AgenticGenerationStage:
         self.stack = stack
         self.input_mode = input_mode
         self.generation_type = generation_type
+        self.variant_errors: Dict[int, str] = {}
 
     async def process_variants(
         self,
@@ -613,6 +614,7 @@ class AgenticGenerationStage:
         for index, result in enumerate(results):
             if isinstance(result, BaseException):
                 print(f"Variant {index + 1} failed: {result}")
+                self.variant_errors[index] = str(result)
                 continue
             if result:
                 variant_completions[index] = result
@@ -687,6 +689,7 @@ class AgenticGenerationStage:
                 )
             )
             await self.send_message("variantError", error_message, index, None, None)
+            self.variant_errors[index] = error_message
             return ""
         except openai.NotFoundError as e:
             print(f"[VARIANT {index + 1}] OpenAI Model not found", e)
@@ -702,6 +705,7 @@ class AgenticGenerationStage:
                 )
             )
             await self.send_message("variantError", error_message, index, None, None)
+            self.variant_errors[index] = error_message
             return ""
         except openai.RateLimitError as e:
             print(f"[VARIANT {index + 1}] OpenAI Rate limit exceeded", e)
@@ -714,11 +718,14 @@ class AgenticGenerationStage:
                 )
             )
             await self.send_message("variantError", error_message, index, None, None)
+            self.variant_errors[index] = error_message
             return ""
         except Exception as e:
             print(f"Error in variant {index + 1}: {e}")
             traceback.print_exception(type(e), e, e.__traceback__)
-            await self.send_message("variantError", str(e), index, None, None)
+            error_message = str(e)
+            await self.send_message("variantError", error_message, index, None, None)
+            self.variant_errors[index] = error_message
             return ""
 
 
@@ -870,8 +877,16 @@ class CodeGenerationMiddleware(Middleware):
 
             # Check if all variants failed
             if len(context.variant_completions) == 0:
+                first_error = next(
+                    (
+                        generation_stage.variant_errors[index]
+                        for index in sorted(generation_stage.variant_errors)
+                        if generation_stage.variant_errors[index]
+                    ),
+                    None,
+                )
                 await context.throw_error(
-                    "Error generating code. Please contact support."
+                    first_error or "Error generating code. Please contact support."
                 )
                 return  # Don't continue the pipeline
 

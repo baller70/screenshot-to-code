@@ -1,6 +1,7 @@
 import asyncio
 import base64
 import binascii
+import json
 import mimetypes
 import re
 import shutil
@@ -135,10 +136,17 @@ def build_codex_exec_command(
         "never",
         "--sandbox",
         "workspace-write",
+        "--disable",
+        "plugins",
+        "--disable",
+        "remote_plugin",
+        "--disable",
+        "apps",
         "exec",
         "--cd",
         str(workdir),
         "--skip-git-repo-check",
+        "--ignore-user-config",
         "--ephemeral",
         "--json",
         "--output-last-message",
@@ -154,6 +162,35 @@ def build_codex_exec_command(
         command.extend(["--image", str(image_path)])
 
     return command
+
+
+def extract_codex_error_message(*, stdout_text: str, stderr_text: str) -> str:
+    for line in stdout_text.splitlines():
+        try:
+            event = json.loads(line)
+        except json.JSONDecodeError:
+            continue
+        if not isinstance(event, dict):
+            continue
+        event_dict = cast(dict[str, object], event)
+        message = event_dict.get("message")
+        if event_dict.get("type") == "error" and isinstance(message, str) and message:
+            return message
+        error = event_dict.get("error")
+        if isinstance(error, dict):
+            error_dict = cast(dict[str, object], error)
+            error_message = error_dict.get("message")
+            if isinstance(error_message, str) and error_message:
+                return error_message
+
+    cleaned_stderr = "\n".join(
+        line
+        for line in stderr_text.splitlines()
+        if line.strip() and line.strip() != "Reading prompt from stdin..."
+    ).strip()
+    if cleaned_stderr:
+        return cleaned_stderr
+    return stderr_text.strip() or stdout_text.strip()
 
 
 def _looks_like_html_document(content: str) -> bool:
@@ -274,9 +311,13 @@ class CodexCliProviderSession:
                 await on_event(StreamEvent(type="thinking_delta", text=f"{line}\n"))
 
         if process.returncode != 0:
+            error_message = extract_codex_error_message(
+                stdout_text=stdout_text,
+                stderr_text=stderr_text,
+            )
             raise RuntimeError(
                 "Codex CLI failed with exit code "
-                f"{process.returncode}: {stderr_text.strip() or stdout_text.strip()}"
+                f"{process.returncode}: {error_message}"
             )
 
         assistant_text = (
