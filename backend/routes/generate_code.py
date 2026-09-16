@@ -219,7 +219,10 @@ class WebSocketCommunicator:
         if not self.is_closed:
             try:
                 await self.websocket.send_json({"type": "error", "value": message})
-                await self.websocket.close(APP_ERROR_WEB_SOCKET_CODE)
+                await self.websocket.close(
+                    code=APP_ERROR_WEB_SOCKET_CODE,
+                    reason=_websocket_close_reason(message),
+                )
             except (
                 ConnectionClosedOK,
                 ConnectionClosedError,
@@ -252,6 +255,14 @@ class WebSocketCommunicator:
             ):
                 pass  # Already closed by client
             self.is_closed = True
+
+
+def _websocket_close_reason(message: str) -> str:
+    reason_limit = 123
+    encoded = message.encode("utf-8")
+    if len(encoded) <= reason_limit:
+        return message
+    return encoded[:reason_limit].decode("utf-8", errors="ignore")
 
 
 @dataclass

@@ -70,3 +70,18 @@ async def test_throw_error_ignores_already_completed_websocket() -> None:
     assert communicator.is_closed is True
     websocket.send_json.assert_awaited_once()
     websocket.close.assert_awaited_once()
+
+
+@pytest.mark.asyncio
+async def test_throw_error_closes_with_truncated_reason() -> None:
+    websocket = MagicMock()
+    websocket.send_json = AsyncMock()
+    websocket.close = AsyncMock()
+    communicator = WebSocketCommunicator(cast(Any, websocket))
+
+    await communicator.throw_error("Generation failed because " + ("x" * 200))
+
+    close_kwargs = websocket.close.await_args.kwargs
+    assert close_kwargs["code"] == 4332
+    assert close_kwargs["reason"].startswith("Generation failed because ")
+    assert len(close_kwargs["reason"].encode("utf-8")) <= 123
