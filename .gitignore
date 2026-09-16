@@ -26,4 +26,6 @@ frontend/.env.local
 walkthrough/
 
 # Local stress-test artifacts
-stress-tests/
+stress-tests/*
+!stress-tests/run_imagegen_packet_ws.py
+!stress-tests/capture_html_routes.mjs

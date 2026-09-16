@@ -5,6 +5,7 @@ APP_ROOT="${APP_ROOT:-/opt/apps/screenshot-to-code-factory}"
 BACKEND_PORT="${BACKEND_PORT:-3474}"
 
 export PATH="/usr/local/bin:/root/.local/bin:${PATH}"
+export CODEX_HOME="${CODEX_HOME:-${APP_ROOT}/secrets/codex}"
 export CODEX_CLI_RUNS_DIR="${CODEX_CLI_RUNS_DIR:-${APP_ROOT}/backend/factory_runs}"
 
 cd "${APP_ROOT}/backend"

@@ -295,8 +295,12 @@ class TestCreatePrompt:
         assert isinstance(text, str)
 
         assert "## ImageGen 2.5 mirror contract" in text
-        assert "Create a route registry" in text
-        assert "Create an asset registry" in text
+        assert "Preserve each screen's first-viewport composition" in text
+        assert "Do not collapse different screenshots into one generic layout pattern" in text
+        assert "MIRROR_ROUTE_REGISTRY" in text
+        assert "inputIndex, route, label, viewportRole, sourceIntent, and majorRegions" in text
+        assert "MIRROR_ASSET_REGISTRY" in text
+        assert "assetId, sourceInputIndexes, role, reusePolicy, and renderStrategy" in text
         assert "Prepare the output for visual repair" in text
         assert "Backend contract" in text
 

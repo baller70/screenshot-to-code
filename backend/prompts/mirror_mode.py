@@ -61,6 +61,8 @@ def build_mirror_mode_prompt_block(
         f"- Target fidelity: {fidelity}. Prioritize one-to-one visual reconstruction over redesign.",
         "- Treat the supplied ImageGen screens as product source material, not inspiration.",
         "- Preserve exact visible copy, hierarchy, spacing, color, typography, imagery, and interaction affordances.",
+        "- Preserve each screen's first-viewport composition: nav density, sidebar/filter columns, hero/media placement, panel proportions, card/table counts, footer bands, and visible whitespace.",
+        "- Do not collapse different screenshots into one generic layout pattern unless the screenshots themselves share that pattern.",
     ]
 
     if mirror_mode["packet_mode"]:
@@ -68,13 +70,15 @@ def build_mirror_mode_prompt_block(
             [
                 f"- Packet mode: interpret all {screenshot_count} uploaded image(s) as one coherent website/app packet.",
                 "- Keep shared brand tokens, navigation, section rhythm, and repeated components consistent across screens.",
+                "- Each uploaded image must become one named route or state in the same generated website/app, not a single blended page.",
             ]
         )
 
     if mirror_mode["route_registry"]:
         lines.extend(
             [
-                "- Create a route registry in the generated code that maps each input screenshot to one route, tab, or major page section.",
+                "- Create a literal MIRROR_ROUTE_REGISTRY object/array in the generated code that maps each input screenshot to one route, tab, or major page section.",
+                "- Each route registry entry must include inputIndex, route, label, viewportRole, sourceIntent, and majorRegions.",
                 "- Name routes from the screen content when possible; otherwise use stable names such as page-1, page-2, page-3.",
             ]
         )
@@ -90,7 +94,8 @@ def build_mirror_mode_prompt_block(
     if mirror_mode["asset_registry"]:
         lines.extend(
             [
-                "- Create an asset registry for logos, photos, backgrounds, icons, badges, charts, and repeated artwork.",
+                "- Create a literal MIRROR_ASSET_REGISTRY object/array for logos, photos, backgrounds, icons, badges, charts, and repeated artwork.",
+                "- Each asset registry entry must include assetId, sourceInputIndexes, role, reusePolicy, and renderStrategy.",
                 "- Reuse one stable asset identity for recurring visuals instead of recreating similar assets independently on each page.",
             ]
         )
@@ -108,6 +113,7 @@ def build_mirror_mode_prompt_block(
             [
                 "- Prepare the output for visual repair: use stable data-mirror-id attributes on major sections, cards, nav items, CTAs, forms, image slots, and repeated elements.",
                 "- Keep layout constants obvious in CSS so a later screenshot-diff pass can move, resize, or restyle individual elements without rewriting the page.",
+                "- Favor explicit CSS variables, grid tracks, fixed aspect ratios, and named section wrappers over anonymous utility-only markup for mirrored regions.",
             ]
         )
 
